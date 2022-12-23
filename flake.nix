@@ -13,7 +13,8 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, telegram-bot-simple }:
-    flake-utils.lib.eachDefaultSystem (system:
+    let packageName = "telegram-bot-monadic";
+    in flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -21,18 +22,12 @@
 
         jailbreakUnbreak = pkg:
           pkgs.haskell.lib.doJailbreak (pkg.overrideAttrs (_: { meta = { }; }));
-
-        packageName = "telegram-bot-monadic";
       in {
-        packages.${packageName} =
-          haskellPackages.callCabal2nix packageName self {
-            # Dependency overrides go here
-            telegram-bot-simple =
-              haskellPackages.telegram-bot-simple_0_6.overrideAttrs
-              (_: { src = telegram-bot-simple; });
-          };
+        legacyPackages = haskellPackages.extend self.overlays.default;
 
-        defaultPackage = self.packages.${system}.${packageName};
+        packages.${packageName} = self.legacyPackages.${system}.${packageName};
+
+        packages.default = self.packages.${system}.${packageName};
 
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
@@ -43,5 +38,11 @@
           inputsFrom =
             map (pkg: pkg.env) (builtins.attrValues self.packages.${system});
         };
-      });
+      }) // {
+        overlays.default = final: prev: {
+          telegram-bot-simple = prev.telegram-bot-simple_0_6.overrideAttrs
+            (_: { src = telegram-bot-simple; });
+          ${packageName} = final.callCabal2nix packageName self { };
+        };
+      };
 }
