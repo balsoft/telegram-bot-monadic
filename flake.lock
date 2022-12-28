@@ -40,13 +40,15 @@
     "telegram-bot-simple": {
       "flake": false,
       "locked": {
-        "lastModified": 1664014619,
-        "narHash": "sha256-87yKTRWQucU+1d6UDL9uXMfU2MO7UFqQdRUhV2WlRds=",
-        "type": "git",
-        "url": "file:///home/balsoft/projects/telegram-bot-simple"
+        "lastModified": 1671981417,
+        "narHash": "sha256-Q9Pe6dCvCuGsRv3wmxqU8mCWhasQhRwDDIKO8XvdpJA=",
+        "owner": "fizruk",
+        "repo": "telegram-bot-simple",
+        "rev": "a0aa517586fd3bb2324a617d2d185c0b65e56398",
+        "type": "github"
       },
       "original": {
-        "owner": "balsoft",
+        "owner": "fizruk",
         "repo": "telegram-bot-simple",
         "type": "github"
       }

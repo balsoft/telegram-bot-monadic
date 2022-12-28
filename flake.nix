@@ -8,7 +8,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
-    telegram-bot-simple.url = "github:balsoft/telegram-bot-simple";
+    telegram-bot-simple.url = "github:fizruk/telegram-bot-simple";
     telegram-bot-simple.flake = false;
   };
 

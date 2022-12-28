@@ -59,17 +59,20 @@ import Telegram.Bot.API as API
       ChosenInlineResult,
       InlineQuery,
       PreCheckoutQuery,
-      ShippingQuery )
+      ShippingQuery, ReplyKeyboardMarkup (..), KeyboardButton (..) )
+import Control.Concurrent (readChan)
+import Control.Exception (IOException, catch)
+import Control.Monad.Except (MonadError(catchError))
 
 -- type TelegramInteraction a = ReaderT (ChatId, Chan Telegram.Bot.Monadic.Update) ClientM a
 
-data ChatChannel = ChatChannel {_chatId :: ChatId, updateChannel :: Chan SomeUpdate}
+data ChatChannel = ChatChannel {channelChatId :: ChatId, channelUpdateChannel :: Chan SomeUpdate}
 
-runTelegramIntegrationBot :: Token -> (ChatChannel -> ClientM a) -> IO (Either ClientError a)
+runTelegramIntegrationBot :: MonadIO m => Token -> (ChatChannel -> ClientM a) -> m (Either ClientError a)
 runTelegramIntegrationBot token interaction = do
-  defaultRunBot token $ do
+  liftIO $ defaultRunBot token $ do
     flip iterateM_ (Nothing, Data.Map.empty) $ \(i, sessions) -> do
-      updates <- getUpdates $ GetUpdatesRequest (fmap (\(UpdateId n) -> UpdateId (n + 1)) i) Nothing (Just 1) (Just [])
+      updates <- catchError (responseResult <$> getUpdates (GetUpdatesRequest (fmap (\(UpdateId n) -> UpdateId (n + 1)) i) Nothing (Just 60) (Just []))) (const $ pure [])
       sessions' <-
         foldM
           ( \sessionsAcc upd -> do
@@ -80,7 +83,7 @@ runTelegramIntegrationBot token interaction = do
                           hPutStrLn stderr $ "Creating new session for chat " ++ show chatId
                           session <- newChan
                           mapM_ (writeChan session) (selectUpdate upd)
-                          task <- async $ defaultRunBot token $ interaction $ ChatChannel (ChatId chatId) session
+                          task <- async $ catch (defaultRunBot token $ interaction $ ChatChannel (ChatId chatId) session) (\e -> fail $ show (e :: IOException))
                           pure (insert chatId (session, task) sessionsAcc)
                      in case Data.Map.lookup chatId sessionsAcc of
                           Just (session, task) -> do
@@ -93,8 +96,8 @@ runTelegramIntegrationBot token interaction = do
                 Nothing -> pure sessionsAcc
           )
           sessions
-          $ responseResult updates
-      pure (lastMay (updateUpdateId <$> responseResult updates), sessions')
+          updates
+      pure (lastMay (updateUpdateId <$> updates), sessions')
 
 data SomeUpdate
   = SomeNewMessage Message
@@ -123,6 +126,9 @@ untilRight :: Monad m => m (Either a b) -> (a -> m ()) -> m b
 untilRight action fallback = action >>= \case
   Left a -> fallback a >> untilRight action fallback
   Right b -> pure b
+
+getUpdate :: Chan SomeUpdate -> ClientM SomeUpdate
+getUpdate = liftIO . readChan
 
 sendMessageRequest :: ChatId -> Text -> SendMessageRequest
 sendMessageRequest c t = SendMessageRequest (SomeChatId c) t Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -171,3 +177,9 @@ editMessageMediaRequest m = EditMessageMediaRequest Nothing Nothing Nothing m No
 
 editMessageReplyMarkupRequest :: Maybe SomeReplyMarkup -> EditMessageReplyMarkupRequest
 editMessageReplyMarkupRequest = EditMessageReplyMarkupRequest Nothing Nothing Nothing
+
+replyKeyboardMarkup :: [[KeyboardButton]] -> ReplyKeyboardMarkup
+replyKeyboardMarkup kb = ReplyKeyboardMarkup kb Nothing Nothing Nothing Nothing
+
+keyboardButton :: Text -> KeyboardButton
+keyboardButton t = KeyboardButton t Nothing Nothing Nothing Nothing

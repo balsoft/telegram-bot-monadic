@@ -68,7 +68,7 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.15.1.0, telegram-bot-simple, async, transformers, servant-client, containers, text, monad-loops, safe
+    build-depends:    base ^>=4.15.1.0, telegram-bot-simple, async, mtl, servant-client, containers, text, monad-loops, safe
 
     -- Directories containing source files.
     hs-source-dirs:   src
