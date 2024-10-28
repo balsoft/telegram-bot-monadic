@@ -40,8 +40,8 @@
         };
       }) // {
         overlays.default = final: prev: {
-          telegram-bot-simple = prev.telegram-bot-simple_0_6.overrideAttrs
-            (_: { src = telegram-bot-simple; });
+          # telegram-bot-simple = prev.telegram-bot-simple.overrideAttrs
+          #   (_: { src = telegram-bot-simple; });
           ${packageName} = final.callCabal2nix packageName self { };
         };
       };
