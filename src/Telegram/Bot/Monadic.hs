@@ -15,7 +15,7 @@ import Data.Map ( lookup, insert, empty )
 import Data.Text ( Text )
 import Safe (lastMay)
 import Servant.Client ( ClientM, ClientError )
-import System.IO (hPutStrLn, stderr)
+import System.IO (hPutStrLn, stderr, hPrint)
 import Telegram.Bot.API as API
     ( toSendDocument,
       updateChatId,
@@ -63,6 +63,7 @@ import Telegram.Bot.API as API
 import Control.Concurrent (readChan)
 import Control.Exception (IOException, catch)
 import Control.Monad.Except (MonadError(catchError))
+import Data.Functor (($>))
 
 -- type TelegramInteraction a = ReaderT (ChatId, Chan Telegram.Bot.Monadic.Update) ClientM a
 
@@ -72,7 +73,7 @@ runTelegramIntegrationBot :: MonadIO m => Token -> (ChatChannel -> ClientM a) ->
 runTelegramIntegrationBot token interaction = do
   liftIO $ defaultRunBot token $ do
     flip iterateM_ (Nothing, Data.Map.empty) $ \(i, sessions) -> do
-      updates <- catchError (responseResult <$> getUpdates (GetUpdatesRequest (fmap (\(UpdateId n) -> UpdateId (n + 1)) i) Nothing (Just 60) (Just []))) (const $ pure [])
+      updates <- catchError (responseResult <$> getUpdates (GetUpdatesRequest (fmap (\(UpdateId n) -> UpdateId (n + 1)) i) Nothing (Just 60) (Just []))) (\e -> liftIO (hPrint stderr e) $> [])
       sessions' <-
         foldM
           ( \sessionsAcc upd -> do
